@@ -34,7 +34,7 @@ public class AnchorDx_CollectData_SearchFiles
 	 * @param Pattern
 	 */
 	@SuppressWarnings("unused")
-	public static void mainFunction(String SampleID_Path, int Pattern)
+	public static int mainFunction(String SampleID_Path, int Pattern, String Extension_Path, ArrayList<String> NewAllPorject)
 	{
 		System.out.println();
 		File des_file = new File(SampleID_Path);
@@ -43,7 +43,7 @@ public class AnchorDx_CollectData_SearchFiles
 
 		ExecutorService exe = Executors.newFixedThreadPool(20); // 设置线程池最大线程数为20
 		for (int i = 0; i < SampleID_File_list.size(); i++) {
-			exe.execute(new WorkThread(SampleID_File_list.get(i), Pattern)); // 向线程池提交任务
+			exe.execute(new WorkThread(SampleID_File_list.get(i), Pattern, Extension_Path, NewAllPorject)); // 向线程池提交任务
 		}
 		exe.shutdown(); // 关闭线程池
 		while (true) {
@@ -69,6 +69,7 @@ public class AnchorDx_CollectData_SearchFiles
 			}
 		}
 		System.out.println();
+		return 0;
 	}
 
 	/**
@@ -106,6 +107,10 @@ public class AnchorDx_CollectData_SearchFiles
 					}
 				}
 				read.close();
+			} else {
+				System.out.println();
+				System.out.println(filePath + "文件不存在");
+				return "No";
 			}
 		} catch (Exception e) {
 			System.out.println("读取文件内容出错：" + filePath);
@@ -139,7 +144,7 @@ public class AnchorDx_CollectData_SearchFiles
 	 * @param Extension
 	 * @param list
 	 */
-	public static void findFile(String Path, String Extension, ArrayList<String> list)
+	public static synchronized void findFile(String Path, String Extension, ArrayList<String> list)
 	{
 		try {
 			String tar = "*" + Extension;

@@ -49,13 +49,16 @@ public class AnchorDx_DataOrganizer
 		String porject_Path = "./基准所有项目收样信息表样本处理追踪表"; // 源文件路径
 		String target_Path = "./Projects/"; // 輸出文件目标路径
 		String excel_part_name = "样本处理追踪表v1_广州基准医疗"; // 源文件名部分字符串
+		String Extension_Path = "./Extension.txt";
 		int Pattern = 0; // 設置工作模式，0代表全盤模式，1代表更新模式
 		File des_file = null;
 		int time = 0; // 設置等待時間次數
+		ArrayList<String> NewAllPorject = new ArrayList<String>(); // 新增加的项目列表
 
 		int args_len = args.length; // 系统传入主函数的参数长度
 		int logo = 0; // "-o"参数输入次数计算标志
 		int logm = 0; // "-m"参数输入次数计算标志
+		int loge = 0; // "-E"参数输入次数计算标志
 		for (int len = 0; len < args_len; len += 2) {
 			if (args[len].equals("-O") || args[len].equals("-o")) {
 				target_Path = args[len + 1] + "/";
@@ -63,7 +66,10 @@ public class AnchorDx_DataOrganizer
 			} else if (args[len].equals("-M") || args[len].equals("-m")) {
 				Pattern = Integer.valueOf(args[len + 1]);
 				logm++;
-			} else if ((args_len == 1) && args[0].equals("-help")) {
+			} else if (args[len].equals("-E") || args[len].equals("-e")) {
+				Extension_Path = args[len + 1];
+				loge++;
+			}  else if ((args_len == 1) && args[0].equals("-help")) {
 				System.out.println();
 				System.out.println("Version: V1.0.0");
 				System.out.println();
@@ -74,6 +80,7 @@ public class AnchorDx_DataOrganizer
 				System.out.println(
 						"-M or -m\t Set work pattern. Inuput 0 or 1, 0 representative operate all data and 1 operate update data. The default value is 0.");
 				System.out.println("-O or -o\t Set output file. The default value is \"./Projects/\".");
+				System.out.println("-E or -e\t Set Extension.txt file. The default value is \"./Extension.txt\".");
 				System.out.println();
 				return;
 			} else {
@@ -85,10 +92,11 @@ public class AnchorDx_DataOrganizer
 				System.out.println(
 						"-M or -m\t Set work pattern. Inuput 0 or 1, 0 representative operate all data and 1 operate update data. The default value is 0.");
 				System.out.println("-O or -o\t Set output file. The default value is \"./Projects/\".");
+				System.out.println("-E or -e\t Set Extension.txt file. The default value is \"./Extension.txt\".");
 				System.out.println();
 				return;
 			}
-			if (logo > 1 || logm > 1) {
+			if (logo > 1 || logm > 1 || loge > 1) {
 				System.out.println();
 				System.out.println("对不起，您输的入Options有重复，请参照以下参数提示输入！");
 				System.out.println();
@@ -97,6 +105,7 @@ public class AnchorDx_DataOrganizer
 				System.out.println(
 						"-M or -m\t Set work pattern. Inuput 0 or 1, 0 representative operate all data and 1 operate update data. The default value is 0.");
 				System.out.println("-O or -o\t Set output file. The default value is \"./Projects/\".");
+				System.out.println("-E or -e\t Set Extension.txt file. The default value is \"./Extension.txt\".");
 				System.out.println();
 				return;
 			}
@@ -136,6 +145,8 @@ public class AnchorDx_DataOrganizer
 				continue;
 			}
 		}
+		
+		ArrayList<String> OldAllPorject = getAllPorjects(target_Path);
 
 		// 根据上面操作所得数据生成对应文件
 		int UF = 1;
@@ -151,12 +162,28 @@ public class AnchorDx_DataOrganizer
 			return;
 		}
 
+		ArrayList<String> NowAllPorject = getAllPorjects(target_Path);
+		
+		for (int i = 0; i < NowAllPorject.size(); i++) {
+			if (OldAllPorject.contains(NowAllPorject.get(i))) {
+				continue;
+			} else {
+				NewAllPorject.add(NowAllPorject.get(i));
+			}
+		}
+		
 		// 查找文件，并输出结果
-		AnchorDx_CollectData_SearchFiles.mainFunction(target_Path, Pattern);
-		System.out.println("AnchorDx_CollectData_SearchFiles finish!");
+		int i = 1;
+		i = AnchorDx_CollectData_SearchFiles.mainFunction(target_Path, Pattern, Extension_Path, NewAllPorject);
+		if (i == 0) {
+			System.out.println("AnchorDx_CollectData_SearchFiles finish!");
+		} else {
+			System.out.println("AnchorDx_CollectData_SearchFiles Failure!");
+			return;
+		}
 
 		Thread.sleep(3000); // 主綫程睡眠3秒
-		upload_File(target_Path); // 上传文件到云端
+		//upload_File(target_Path); // 上传文件到云端
 
 		System.out.println();
 		System.out.println("===============================================");
@@ -326,13 +353,17 @@ public class AnchorDx_DataOrganizer
 								// 清空列表数据
 								OldDatalist.clear();
 								UpdataDatalist.clear();
-								readLibfile(LastTime_Output_File, OldDatalist); // 读上次更新的表数据
+								String head = readLibfile(LastTime_Output_File, OldDatalist); // 读上次更新的表数据
 								ArrayList<String> Data_list = getFromExcel(Source_File); // 读excel表
 								writeFile(Data_list, Output_File); // 写数据到总数据文件
-								for (int i = OldDatalist.size(); i < Data_list.size(); i++) {
-									UpdataDatalist.add(Data_list.get(i)); // 获取更新数据
+								if (head.equals("NO")) {
+									writeFile(Data_list, Updata_File); // 写数据到更新数据文件
+								} else {
+									for (int i = OldDatalist.size(); i < Data_list.size(); i++) {
+										UpdataDatalist.add(Data_list.get(i)); // 获取更新数据
+									}
+									writeFile(UpdataDatalist, Updata_File); // 写数据到更新数据文件
 								}
-								writeFile(UpdataDatalist, Updata_File); // 写数据到更新数据文件
 
 								// 做软链接
 								try {
@@ -596,8 +627,8 @@ public class AnchorDx_DataOrganizer
 				}
 				read.close();
 			} else {
-				System.out.println("找不到指定的文件：" + filePath);
-				return "OFF";
+				//System.out.println("找不到指定的文件：" + filePath);
+				return "NO";
 			}
 		} catch (Exception e) {
 			System.out.println("读取文件内容出错：" + filePath);
@@ -605,5 +636,26 @@ public class AnchorDx_DataOrganizer
 			return "OFF";
 		}
 		return Head;
+	}
+	
+	/**
+	 * 获取当前所有项目名，然后返回该项目名称的列表的方法。
+	 * 
+	 * @param filePath
+	 * @param IFILE
+	 * @return
+	 */
+	public static ArrayList<String> getAllPorjects(String filePath)
+	{
+		ArrayList<String> AllPorjectsList = new ArrayList<String>();
+		File des_file = new File(filePath);
+		for (File pathname : des_file.listFiles()) {
+			// 如果是目录
+			if (pathname.isDirectory()) {
+				String dir_name = pathname.getName();
+				AllPorjectsList.add(dir_name);
+			}
+		}
+		return AllPorjectsList;
 	}
 }

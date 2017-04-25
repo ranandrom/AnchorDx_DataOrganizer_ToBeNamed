@@ -43,6 +43,7 @@ public class WorkThread extends Thread
 	private ArrayList<String> Black_All_Data = new ArrayList<String>();
 	private ArrayList<String> Updata_SampleID_list = new ArrayList<String>();
 	private ArrayList<String> Extension_List = new ArrayList<String>(); // Extension数据列表
+	private ArrayList<String> NewAllPorject = new ArrayList<String>(); // 新增加的项目列表
 	private String Extension_Path = null;
 	private String Path1 = null;
 	private String Path2 = null;
@@ -56,14 +57,15 @@ public class WorkThread extends Thread
 	 * @param SampleID_File_list_get
 	 * @param Pattern
 	 */
-	public WorkThread(String SampleID_File_list_get, int Pattern) {
+	public WorkThread(String SampleID_File_list_get, int Pattern, String Extension_Path, ArrayList<String> NewAllPorject) {
 		super();
 		this.SampleID_File_list_get = SampleID_File_list_get;
-		this.Extension_Path = "./Extension.txt";
+		this.Extension_Path = Extension_Path;
 		this.Path1 = "/Src_Data1/nextseq500/outputdata/";
 		this.Path2 = "/Src_Data1/x10/outputdata/";
 		this.Path3 = "/Src_Data1/analysis/Ironman/";
 		this.Pattern = Pattern;
+		this.NewAllPorject = NewAllPorject;
 	}
 
 	/**
@@ -71,7 +73,10 @@ public class WorkThread extends Thread
 	 */
 	public void run()
 	{
-		AnchorDx_CollectData_SearchFiles.readLibfile(Extension_Path, Extension_List); // 读取Extension数据到列表
+		String Exten = AnchorDx_CollectData_SearchFiles.readLibfile(Extension_Path, Extension_List); // 读取Extension数据到列表
+		if (Exten.equals("No")) {
+			return;
+		}
 
 		File SampleID_File = new File(SampleID_File_list_get);
 		File SampleID_File_Path = new File(SampleID_File.getParent());
@@ -101,13 +106,17 @@ public class WorkThread extends Thread
 		String SampleID_Path = SampleID_File.getParent();
 		String Master = SampleID_File.getParent() + "/" + "Master";
 		AnchorDx_DataOrganizer.my_mkdir(Master); // 创建Master目录
-
+		
+		if (NewAllPorject.contains(SampleID_PorjectName)) {
+			this.Pattern = 0;
+		}
+		
 		// 返回文件查找结果
 		for (int x = 0; x < Extension_List.size(); x++) {
 			Search_Path.clear();
 			list.clear();
 			IFILE_List.clear();
-
+			
 			if (Extension_List.get(x).equals("R1_001.fastq.gz") || Extension_List.get(x).equals("R2_001.fastq.gz")) {
 				Output_Sub_Directory = "RawFastq";
 				Extension = "R[1-2]_001.fastq.gz";
